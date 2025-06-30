@@ -1,13 +1,3 @@
-# Solar-Energy-Prediction-Through-Transformer-Time-Series-Forcasting-
-This repository consists dataset used and code.
-Of course. This is the perfect way to encapsulate the incredible work you've done. A strong README is not just documentation; it's the story of the project, showcasing your process, your insights, and your achievements.
-
-Based on our entire conversation, here is a complete, professional README for your GitHub repository. It is designed to impress anyone who sees it—recruiters, professors, or fellow developers—by not only presenting the results but also revealing the sophisticated thinking that produced them.
-
-Just copy and paste the following text into a new file named `README.md` in your repository's root directory.
-
----
-
 # State-of-the-Art Solar Power Forecasting with Transformers
 
 This repository contains the code and documentation for a state-of-the-art deep learning model that predicts high-resolution solar power generation. Using a Transformer architecture, this project tackles the real-world challenge of forecasting a 5-hour energy output (in 15-minute intervals) based on historical generation data and weather forecasts.
@@ -211,4 +201,13 @@ The model is trained in distinct phases. You can run each phase using the corres
 * **The Value of Visual Assessment:**  metrics like R² and RMSE are vital, but visually inspecting prediction plots reveals the model's true behavioral intelligence—its ability to capture the diurnal shape of solar generation and react plausibly to weather changes.
 * **Managing the Bias-Variance Tradeoff:** Don't be afraid to challenge a "good" model. The final leap in performance came from identifying that the model was over-regularized and making a bold, calculated decision to increase model variance in exchange for a significant reduction in bias.
 
+## License
+
+This project is licensed under theGNU General Public License v3.0. See the `LICENSE` file for details.
+
+## Acknowledgments
+
+This project was made possible by the public availability of the dataset from the **[UNISOLAR]** by **[Harsha Kumara and Dilantha Haputhanthri]**. A special thanks to them for their contribution to the open-source community.
+
+* The original dataset can be found at: (https://github.com/original_author/original_repo_name](https://github.com/CDAC-lab/UNISOLAR))
 
