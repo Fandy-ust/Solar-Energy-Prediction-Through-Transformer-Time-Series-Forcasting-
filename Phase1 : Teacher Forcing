@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 ALL_TRAIN_DATA_PATH = r"C:\Users\1\Documents\Solarpower\Data_processed\Train_val_test_split_new\train_selected_sites.csv"
 ALL_VAL_DATA_PATH = r"C:\Users\1\Documents\Solarpower\Data_processed\Train_val_test_split_new\validation_enhanced.csv"
 STATS_FILE_PATH = r"C:\Users\1\Documents\Solarpower\Data_processed\Train_val_test_split_new\scaler\campus_scale.txt"
-MODEL_SAVE_DIR = r"C:\Python\Trained_models\Elite_Model_Transformer_Phase1_Complete"  # 最终版模型目录
+MODEL_SAVE_DIR = r"C:\Python\Trained_models\Elite_Model_Transformer_Phase1_Complete" 
 os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
 
 
