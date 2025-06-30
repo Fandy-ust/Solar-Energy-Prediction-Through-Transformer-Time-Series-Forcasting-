@@ -16,14 +16,12 @@ ALL_VAL_DATA_PATH = r"C:\Users\1\Documents\Solarpower\Data_processed\Train_val_t
 STATS_FILE_PATH = r"C:\Users\1\Documents\Solarpower\Data_processed\Train_val_test_split_new\scaler\campus_scale.txt"
 
 
-PHASE1_MODEL_PATH = r"C:\Python\Trained_models\Elite_Model_Transformer_Phase1_Complete\transformer_elite_model_phase1_V3.pth"
+PHASE1_MODEL_PATH = r"C:\Python\Trained_models\Elite_Model_Transformer_Phase1_Complete\transformer_elite_model_phase1.pth"
 
-# !! 关键：定义第二阶段A新模型的保存目录和文件名 !!
 PHASE2A_SAVE_DIR = r"C:\Python\Trained_models\Elite_Model_Transformer_Phase2A_Complete"
 os.makedirs(PHASE2A_SAVE_DIR, exist_ok=True)
 PHASE2A_MODEL_SAVE_PATH = os.path.join(PHASE2A_SAVE_DIR, 'transformer_elite_model_phase2a.pth')
 
-# --- 特征列 (与您之前代码一致) ---
 TARGET_COLUMN = 'SolarGeneration'
 WEATHER_FEATURES = ['AirTemperature', 'Ghi_hourly', 'CloudOpacity_hourly', "minutes_since_last_update",
                     "RelativeHumidity"]
@@ -31,22 +29,18 @@ TIME_FEATURES = ["zenith_sin", "azimuth_sin", "day_sin", "year_sin"]
 ENCODER_FEATURES = WEATHER_FEATURES + TIME_FEATURES + [TARGET_COLUMN]
 FUTURE_KNOWN_FEATURES = TIME_FEATURES
 DECODER_INPUT_FEATURES = FUTURE_KNOWN_FEATURES + [TARGET_COLUMN]
-# 新增: 在DECODER_INPUT_FEATURES中找到TARGET_COLUMN的索引，方便后续更新
 TARGET_FEATURE_INDEX = DECODER_INPUT_FEATURES.index(TARGET_COLUMN)
 
-# --- 训练超参数 ---
 LOOKBACK_STEPS = 4 * 24
 LOOKFORWARD_STEPS = 4 * 5
 BATCH_SIZE = 32
-# !! 关键：为微调阶段设置一个较小的学习率和较少的Epochs !!
 LEARNING_RATE_PHASE2A = 0.5e-6
-EPOCHS_PHASE2A = 5  # 阶段2A 通常不需要太多 Epochs
+EPOCHS_PHASE2A = 5 
 MAX_GRAD_NORM = 1.0
 PATIENCE = 3
 SENTINEL_VALUE = -999.0
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# --- Transformer 模型超参数 (与第一阶段保持一致) ---
 D_MODEL = 128
 NHEAD = 8
 NUM_ENCODER_LAYERS = 3
@@ -55,16 +49,7 @@ DIM_FEEDFORWARD = 512
 DROPOUT_RATE = 0.1
 
 
-# =============================================================================
-#  2. 模型、数据管道、损失函数 (完全复用您之前的代码)
-# =============================================================================
-# (此处省略了您之前提供的 PositionalEncoding, TimeSeriesTransformer,
-#  SolarPowerDataset_Transformer, masked_mse_loss, 以及数据缩放函数的代码，
-#  因为它们无需任何改动，直接复用即可)
-# 假设这些类和函数已经在这个文件的上方被定义或被正确导入
-
 class PositionalEncoding(nn.Module):
-    # (代码无变化)
     def __init__(self, d_model: int, dropout: float = 0.1, max_len: int = 5000):
         super().__init__()
         self.dropout = nn.Dropout(p=dropout)
@@ -98,7 +83,6 @@ class TimeSeriesTransformer(nn.Module):
     def _generate_square_subsequent_mask(self, sz: int) -> torch.Tensor:
         return torch.triu(torch.ones(sz, sz) * float('-inf'), diagonal=1)
 
-    # <-- forward方法签名更新，接收 src_key_padding_mask -->
     def forward(self, src: torch.Tensor, tgt: torch.Tensor,
                 tgt_key_padding_mask: torch.Tensor,
                 src_key_padding_mask: torch.Tensor) -> torch.Tensor:
@@ -110,7 +94,6 @@ class TimeSeriesTransformer(nn.Module):
         tgt_emb = self.decoder_embedding(tgt) * math.sqrt(self.d_model)
         tgt_emb = self.pos_encoder(tgt_emb)
 
-        # <-- 在调用encoder时，传入 src_key_padding_mask -->
         memory = self.transformer.encoder(
             src=src_emb,
             src_key_padding_mask=src_key_padding_mask
@@ -125,13 +108,9 @@ class TimeSeriesTransformer(nn.Module):
         )
         return self.output_layer(decoder_output)
 
-
-# =================================================================================
-# 2. <-- 核心改动: 数据处理模块，生成src_key_padding_mask -->
-# =================================================================================
 class SolarPowerDataset_Transformer(Dataset):
     def __init__(self, df, lookback, lookforward):
-        # (初始化代码无变化)
+        
         self.df = df
         self.lookback = lookback
         self.lookforward = lookforward
@@ -148,7 +127,6 @@ class SolarPowerDataset_Transformer(Dataset):
     def __len__(self):
         return self.total_samples
 
-    # <-- __getitem__ 返回五个张量 -->
     def __getitem__(self, idx):
         campus_idx = 0
         while idx >= self.campus_indices[campus_idx]['count']:
@@ -159,31 +137,21 @@ class SolarPowerDataset_Transformer(Dataset):
         end_pos = start_pos + self.total_seq_len
         sequence_slice = self.df.iloc[start_pos:end_pos]
 
-        # 1. 编码器相关数据
-        src_df = sequence_slice.iloc[:self.lookback].copy()  # 使用.copy()避免SettingWithCopyWarning
-
-        # 1a. <-- 新增: 为Encoder创建Padding Mask -->
-        # 必须在填充NaN之前创建！True代表这个位置是NaN，需要被忽略。
+        src_df = sequence_slice.iloc[:self.lookback].copy()  
+   
         src_key_padding_mask = torch.tensor(src_df[TARGET_COLUMN].isna().values, dtype=torch.bool)
 
-        # 1b. 填充src中的NaN值，以避免NaN传入模型导致计算错误。填充为0是安全的，因为注意力会被mask掉。
         src_df.fillna(0, inplace=True)
         src = torch.tensor(src_df[ENCODER_FEATURES].values, dtype=torch.float32)
 
-        # 2. 解码器相关数据
         future_slice = sequence_slice.iloc[self.lookback:]
 
-        # 2a. 为Decoder创建Padding Mask (逻辑不变)
         tgt_key_padding_mask = torch.tensor(future_slice[TARGET_COLUMN].isna().values, dtype=torch.bool)
 
-        # 2b. 创建解码器输入 (逻辑不变)
-        # 1. 从 sequence_slice（包含编码+预测窗口）里取出最后一个编码器时刻的真实 target
         last_obs = sequence_slice.iloc[self.lookback - 1][TARGET_COLUMN]
 
-        # 2. 对未来目标做一次位移
         shifted = future_slice[TARGET_COLUMN].shift(1)
 
-        # 3. 将第一个位置（原来是 NaN）赋成 last_obs，再填其余可能的 NaN
         shifted.iloc[0] = last_obs
         shifted = shifted.fillna(0)
         future_known_df = future_slice[FUTURE_KNOWN_FEATURES]
@@ -191,16 +159,12 @@ class SolarPowerDataset_Transformer(Dataset):
                                   shifted.reset_index(drop=True).rename(TARGET_COLUMN)], axis=1)
         tgt_input = torch.tensor(tgt_input_df[DECODER_INPUT_FEATURES].values, dtype=torch.float32)
 
-        # 2c. 创建解码器目标 (逻辑不变)
         tgt_output_series = future_slice[TARGET_COLUMN].fillna(SENTINEL_VALUE)
         tgt_output = torch.tensor(tgt_output_series.values, dtype=torch.float32).unsqueeze(-1)
 
         return src, tgt_input, tgt_output, tgt_key_padding_mask, src_key_padding_mask
 
 
-# =================================================================================
-# 3. 带掩码的损失函数 (与之前相同)
-# =================================================================================
 def masked_mse_loss(predictions: torch.Tensor, targets: torch.Tensor, sentinel_value: float = SENTINEL_VALUE):
     mask = targets != sentinel_value
     if not mask.any():
@@ -210,9 +174,6 @@ def masked_mse_loss(predictions: torch.Tensor, targets: torch.Tensor, sentinel_v
     return F.mse_loss(predictions_masked, targets_masked)
 
 
-# =================================================================================
-# 4. 数据处理函数 (与之前相同)
-# =================================================================================
 def apply_zscore_scaling(df_data, columns, stats):
     df_scaled = df_data.copy()
     for col in columns:
@@ -234,12 +195,10 @@ def scale_dataframe_by_campus(df, scaler_stats):
         campus_params = scaler_stats.get(campus_id)
 
         if campus_params:
-            # 对天气特征中的NaN值填充0
             for col in WEATHER_FEATURES:
                 if col in group_copy.columns:
                     group_copy[col] = group_copy[col].fillna(0)
 
-            # 应用缩放
             scaled_group = apply_zscore_scaling(group_copy, columns_to_scale, campus_params)
             scaled_dfs.append(scaled_group)
 
@@ -248,13 +207,8 @@ def scale_dataframe_by_campus(df, scaler_stats):
 
     return pd.concat(scaled_dfs).sort_index()
 
-# =============================================================================
-#  3. 核心训练逻辑: Phase 2A (逐步监督)
-# =============================================================================
 def train_epoch_phase2a(model, data_loader, optimizer, criterion, device):
-    """
-    执行阶段2A的一个训练Epoch，采用“逐步监督”策略。
-    """
+
     model.train()
     total_loss_for_logging = 0
     num_batches_processed = 0
@@ -262,19 +216,15 @@ def train_epoch_phase2a(model, data_loader, optimizer, criterion, device):
     progress_bar = tqdm(data_loader, desc=f"Phase 2A Training (Step-wise Supervision)", leave=True, dynamic_ncols=True)
 
     for batch in progress_bar:
-        # 数据准备 (与第一阶段相同)
         src, tgt_input, tgt_output, tgt_padding_mask, src_padding_mask = \
             batch[0].to(device), batch[1].to(device), batch[2].to(device), \
                 batch[3].to(device), batch[4].to(device)
 
-        # 梯度清零，准备累积一个Batch中所有修复轮次的梯度
         optimizer.zero_grad()
 
-        # ----- 核心逻辑：带“逐步监督”的多轮并行填充 -----
-        nan_mask = (tgt_output[:, :, 0] == SENTINEL_VALUE)  # 目标是单列，所以索引为0
+        nan_mask = (tgt_output[:, :, 0] == SENTINEL_VALUE) 
         max_nans_in_batch = torch.max(torch.sum(nan_mask, dim=1)).item()
 
-        # 如果批次中没有NaN，则进行一次标准的有监督训练
         if max_nans_in_batch == 0:
             outputs = model(src, tgt_input, tgt_padding_mask, src_padding_mask)
             loss = criterion(outputs, tgt_output)
@@ -282,44 +232,30 @@ def train_epoch_phase2a(model, data_loader, optimizer, criterion, device):
                 loss.backward()
                 total_loss_for_logging += loss.item()
         else:
-            # 初始化"工作台"
             working_tgt_input = tgt_input.clone()
             nan_cumsum = torch.cumsum(nan_mask.int(), dim=1)
 
-            # 开始多轮并行修复与逐步监督
             for k in range(int(max_nans_in_batch)):
-                # a. 进行一次并行的前向传播
                 current_model_output = model(src, working_tgt_input, tgt_padding_mask, src_padding_mask)
 
-                # b. 核心改进: 立即计算当前轮次的损失
                 loss_k = criterion(current_model_output, tgt_output)
 
-                # c. 核心改进: 如果损失有效，立即进行反向传播以累积梯度
                 if not torch.isnan(loss_k) and loss_k.item() > 0:
-                    # 我们对每一轮的损失进行加权，越靠后的轮次权重越大，鼓励模型在信息更全时做出更好的预测
-                    # 这是一个可选的trick，可以从简单的 loss_k.backward() 开始
                     weight = (k + 1) / max_nans_in_batch
                     (loss_k * weight).backward()
 
-                    # 日志记录只记录原始loss
-                    if k == max_nans_in_batch - 1:  # 只记录最后一轮的loss作为代表
+                    if k == max_nans_in_batch - 1: 
                         total_loss_for_logging += loss_k.item()
 
-                # d. 准备下一轮的输入 (如果是最后一轮则无需准备)
                 if k == max_nans_in_batch - 1:
                     break
 
-                # 定位第k+1个NaN的位置
                 is_kth_nan = (nan_cumsum == k + 1) & nan_mask
 
-                # 为了避免对需要梯度的叶子变量进行原地操作，我们.detach()预测值
                 predictions_for_kth_nan = current_model_output.detach()[:, :, 0][is_kth_nan]
 
-                # 更新工作台的对应位置
                 working_tgt_input[:, :, TARGET_FEATURE_INDEX][is_kth_nan] = predictions_for_kth_nan
 
-        # ----- 所有修复轮次结束 -----
-        # d. 执行一次优化器步骤，使用累积的所有梯度来更新模型权重
         torch.nn.utils.clip_grad_norm_(model.parameters(), MAX_GRAD_NORM)
         optimizer.step()
 
@@ -331,9 +267,6 @@ def train_epoch_phase2a(model, data_loader, optimizer, criterion, device):
 
 
 def validate_epoch_phase2a(model, data_loader, criterion, device):
-    """
-    在验证集上评估Phase 2A模型。评估逻辑与训练逻辑相同，以保证一致性。
-    """
     model.eval()
     total_val_loss = 0
 
@@ -370,32 +303,22 @@ def validate_epoch_phase2a(model, data_loader, criterion, device):
     return total_val_loss / len(data_loader)
 
 
-# =============================================================================
-#  4. 主执行逻辑
-# =============================================================================
-if __name__ == "__main__":
-    print(f"--- Transformer精英模型微调 (第二阶段 A - 逐步监督) ---")
-    print(f"使用设备: {DEVICE}")
 
-    # 1. 加载和准备数据 (与第一阶段相同)
-    print("正在加载数据...")
+if __name__ == "__main__":
+
     df_train_all = pd.read_csv(ALL_TRAIN_DATA_PATH)
     df_val_all = pd.read_csv(ALL_VAL_DATA_PATH)
     with open(STATS_FILE_PATH, 'r') as f:
         scaling_stats = json.load(f)
 
-    print("正在标准化数据...")
     df_train_scaled = scale_dataframe_by_campus(df_train_all, scaling_stats)
     df_val_scaled = scale_dataframe_by_campus(df_val_all, scaling_stats)
 
-    print("正在创建Dataset和DataLoader...")
     train_dataset = SolarPowerDataset_Transformer(df_train_scaled, LOOKBACK_STEPS, LOOKFORWARD_STEPS)
     val_dataset = SolarPowerDataset_Transformer(df_val_scaled, LOOKBACK_STEPS, LOOKFORWARD_STEPS)
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
-    print(f"训练样本数: {len(train_dataset)}, 验证样本数: {len(val_dataset)}")
 
-    # 2. 初始化模型
     model = TimeSeriesTransformer(
         encoder_feature_dim=len(ENCODER_FEATURES),
         decoder_feature_dim=len(DECODER_INPUT_FEATURES),
@@ -404,19 +327,9 @@ if __name__ == "__main__":
         dropout=DROPOUT_RATE
     ).to(DEVICE)
 
-    # 3. !! 关键步骤: 加载在第一阶段训练好的模型权重 !!
-    if os.path.exists(PHASE1_MODEL_PATH):
-        print(f"成功加载第一阶段预训练模型: {PHASE1_MODEL_PATH}")
-        model.load_state_dict(torch.load(PHASE1_MODEL_PATH, map_location=DEVICE))
-    else:
-        print(f"警告: 未找到第一阶段模型 {PHASE1_MODEL_PATH}。将从头开始训练。")
-
-    # 4. 初始化优化器和损失函数
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE_PHASE2A)
     criterion = masked_mse_loss
 
-    # 5. 开始训练
-    print("开始微调 (Phase 2A)...")
     best_val_loss = float('inf')
     patience_counter = 0
 
@@ -436,8 +349,7 @@ if __name__ == "__main__":
         else:
             patience_counter += 1
             if patience_counter >= PATIENCE:
-                print(f"  > 早停触发！在 Epoch {epoch + 1}。")
                 break
 
-    print(f"\n精英模型第二阶段A微调完成。最佳泛化验证损失: {best_val_loss:.6f}")
-    print(f"模型已保存在: {PHASE2A_MODEL_SAVE_PATH}")
+    print(f"\nPhase2A training conplete. Best Validaation Loss: {best_val_loss:.6f}")
+    print(f"Model saved at: {PHASE2A_MODEL_SAVE_PATH}")
