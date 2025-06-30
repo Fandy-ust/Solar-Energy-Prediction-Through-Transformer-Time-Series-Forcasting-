@@ -136,39 +136,6 @@ The model uses a rich set of engineered features to capture temporal and weather
 * **Encoder Inputs:** Historical weather data, time-based cyclical features, and past solar generation.
 * **Decoder Inputs:** Future-known time-based features and the model's own previous prediction for the target value.
 
-## Installation
-
-To set up the environment and run this project, follow these steps:
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/your-username/your-repo-name.git
-   cd your
-   ```
-
-   ```bash
-   git clone https://github.com/your-username/your-repo-name.git
-   cd your-repo-name
-   ```
-
-2. **Create and activate a virtual environment (recommended):**
-
-   ````bash
-   python -m venv v
-   ```env
-   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-   ````
-
-3. \*\*Install the**Install the dependencies:**
-   A `requirements.txt` file should be created listing the necessary libraries.
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-   Key dependencies include: `torch`, `pandas`, `numpy`, `scikit-learn`, `tqdm`.
-
 ## Usage
 
 The model is trained in distinct phases. You can run each phase using the corresponding script. Ensure your data is placed in the correct directory as specified by the path variables within the scripts.
