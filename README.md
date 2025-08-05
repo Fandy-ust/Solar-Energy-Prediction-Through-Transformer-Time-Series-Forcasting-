@@ -1,4 +1,4 @@
-Solar Power Forecasting with Transformers
+#Solar Power Forecasting with Transformers
 
 This repository contains the code and documentation for a state-of-the-art deep learning model that predicts high-resolution solar power generation. Using a Transformer architecture, this project tackles the real-world challenge of forecasting a 5-hour energy output (in 15-minute intervals) based on historical generation data and weather forecasts.
 
