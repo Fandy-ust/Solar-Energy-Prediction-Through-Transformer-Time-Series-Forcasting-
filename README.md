@@ -31,8 +31,8 @@ The core philosophy of this project was to systematically build upon a strong fo
 ### Datapolishing
 
 The dataset being polished is from the **[UNISOLAR]** by **[Harsha Kumara and Dilantha Haputhanthri]** The original dataset consists solar power generation data from 5 different cities. Within each city, there are various sites of solar panel with different total panel area. Therefore the range of power(kW), which is strongly related to total panel area, various significantly between different sites and cities. It would be complicated to maintain a model that learn to generate different output as there are 42 different solar panel stations with different total panel area. It is also hard to generatize the model to other power stations. More importantly, some of the site information provided from **[UNISOLAR]** is missing. We dicided to linearly scale all the power data of different stations into a selected range of 0-20kW. 2 assumptions were made: 
-# 1. light intensity is uniform at the solar panel. 
-# 2. the panel efficiency is independent to size of power station.
+* light intensity is uniform at the solar panel. 
+* Panel efficiency is independent to size of power station.
 
 Solar power generation should be directly proportional to the total panel area. We carefully chose a standard total panel area with range of power generation 0-20kW. It is observed that power stations with similar total panel area have similar range of power generation, as the power data span through several years, every station have been through similar peak light intensity. Therefore we could directly scale the power data from it's original range to standard range as input for model. an intuitive way is to think it as switching from power to power per m^2. 
 
