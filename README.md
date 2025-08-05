@@ -12,7 +12,7 @@ This project is not just a demonstration of a powerful architecture, but a case 
 * **Transformer Architecture:** Leverages the power of self-attention mechanisms to capture complex temporal dependencies.
 * **Advanced Training Strategy:** Employs a three-phase training methodology to build a robust, production-ready model.
 * **Exposure Bias Mitigation:** The final training phase is fully autoregressive, forcing the model to learn from its own predictions and making it resilient to compounding errors.
-* **State-of-the-Art Performance:** Achieves a final R² of **0.8905** and an RMSE of **1.7025 kW**.
+* **State-of-the-Art Performance:** Achieves a final R² of **0.9002** and an RMSE of **1.624 kW**.
 
 ## Performance
 
@@ -22,7 +22,7 @@ The project's success is best illustrated by the iterative improvement across th
 | :------------ | :----------------------------------- | :---------- | :----------------- |
 | **V4**        | Elite Baseline (Pre-Polish)          | 0.8731      | \~1.95             |
 | **V5**        | Standard Autoregressive Polish       | 0.8779      | 1.798              |
-| **V6 ()**     | **Aggressive Autoregressive Polish** | **0.8905**  | **1.703**          |
+| **V6 ()**     | **Aggressive Autoregressive Polish** | **0.9002**  | **1.624**          |
 
 ## The Journey: A Multi-Phase Approach
 
