@@ -1,4 +1,4 @@
-# State-of-the-Art Solar Power Forecasting with Transformers
+Solar Power Forecasting with Transformers
 
 This repository contains the code and documentation for a state-of-the-art deep learning model that predicts high-resolution solar power generation. Using a Transformer architecture, this project tackles the real-world challenge of forecasting a 5-hour energy output (in 15-minute intervals) based on historical generation data and weather forecasts.
 
@@ -82,34 +82,6 @@ The model uses a rich set of engineered features to capture temporal and weather
 
 * **Encoder Inputs:** Historical weather data, time-based cyclical features, and past solar generation.
 * **Decoder Inputs:** Future-known time-based features and the model's own previous prediction for the target value.
-
-
-
-## Usage
-
-The model is trained in distinct phases. You can run each phase using the corresponding script. Ensure your data is placed in the correct directory as specified by the path variables within the scripts.
-
-1..  **Run Phase 1 & 2 Training (Baseline Model):**
-`bash
-    python 
-    `
-`bash
-    python train_phase2b.py
-    `
-
-2. **Run Phase 3 Training ( Autoregressive Polish):**
-   This script loads the best model from the previous phase and begins the final fine-tuning.
-
-   ```bash
-   python train_phase3_final.py
-   ```
-
-3. **Run Evaluation:**
-   To evaluate the final model and generate prediction plots:
-
-   ```bash
-   python evaluate_final_model.py
-   ```
 
 ## Key Learnings & Insights
 
