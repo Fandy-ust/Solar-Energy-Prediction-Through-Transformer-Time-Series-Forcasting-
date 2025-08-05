@@ -2,7 +2,7 @@
 
 This repository contains the code and documentation for a state-of-the-art deep learning model that predicts high-resolution solar power generation. Using a Transformer architecture, this project tackles the real-world challenge of forecasting a 5-hour energy output (in 15-minute intervals) based on historical generation data and weather forecasts.
 
-The model achieves an exceptional **R-squared (R²) score of 0.8905** on the final test set, demonstrating its high accuracy and reliability.
+The model achieves an exceptional **R-squared (R²) score of 0.9002** on the final test set, demonstrating its high accuracy and reliability.
 
 This project is not just a demonstration of a powerful architecture, but a case study in advanced model development, including multi-phase training, mitigating exposure bias, and aggressive, intuition-driven fine-tuning.
 
