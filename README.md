@@ -34,11 +34,11 @@ The dataset being polished is from the **[UNISOLAR]** by **[Harsha Kumara and Di
 * light intensity is uniform at the solar panel. 
 * Panel efficiency is independent to size of power station.
 
-Solar power generation should be directly proportional to the total panel area. We carefully chose a standard total panel area with range of power generation 0-20kW. It is observed that power stations with similar total panel area have similar range of power generation, as the power data span through several years, every station have been through similar peak light intensity. Therefore we could directly scale the power data from it's original range to standard range as input for model. an intuitive way is to think it as switching from power to power per m^2. 
+Solar power generation should be directly proportional to the total panel area. We carefully chose a standard total panel area with range of power generation 0-20kW. It is observed that power stations with similar total panel area have similar range of power generation, as the power data span through several years, every station have been through similar peak light intensity. Therefore we could directly scale the power data from it's original range to standard range as input for model. An intuitive way is to think it as switching from power to power per m^2. 
 
-The weather data and solar irradiance provided are citywised instead of stationwised. We tried to include every stations in a city as training samples, but found model confusing the input-output relationship. At any instant, the model recieve identical input (airtemperature, solar irradiance .etc) from stations in same city, is required to generate different output (power). We decided to select one station per city to avoid such confusion. For stations in a city, we trained a simple LSTM model to predict future power generation and evaluated their performance on stations of other cities. The one with most reasonable R^2 and RMSE was chosen. 5 stations from 5 cities were selected as training samples. The validation set and test set was randomly extracted and removed from the 5 stations.  
+The weather data and solar irradiance provided are citywised instead of stationwised. We tried to include every stations in a city as training samples, but found model being confused by the input-output relationship. At any instant, the model recieve identical input (airtemperature, solar irradiance .etc) from stations in same city, is required to generate different output (power). Thus, We decided to select one station per city to avoid such confusion. For stations in a city, we trained a simple LSTM model to predict future power generation and evaluated their performance on stations of other cities. The one with most reasonable R^2 and RMSE was chosen. 5 stations from 5 cities were selected as training samples. The validation set and test set was randomly extracted and removed from the 5 stations.  
 
-The provided dataset consists empty strings as power generation. Some unrecorded power generation due to the absence of sunlight during night were filled with 0. The other "empty" power generation at noon, appearing as loss of data, were remained unfilled. There "NaN" values to computer are marked and masked during training.
+The provided dataset consists empty strings as power generation. Some unrecorded power generation data due to the absence of sunlight during night were filled with 0. The other "empty" power generation at noon, appearing likely as a loss of data, were remained unfilled. These "NaN" values to computer are marked and masked during training.
 
 ### Feature Engineering
 
@@ -48,12 +48,11 @@ This enable the model to deduce the effective information from input on its own,
 We created calculated features like "zenith" and "azimuth" as encoder and decoder input to provide Sun's angular position in a sinusoidal way. This could warmly guide the model to estimate future solar irradiance and even weather conditions.
 
 
+### Phase 1&2: The Strong Baseline (Model V4)
 
+The initial phases focused on building a powerful Transformer model using standard best practices, including teacher forcing and scheduled sampling. We modified the scheduled sampling, which take advantage of disadvantage(empty string). The model is missioned to generate the missing values. For example, the original target sequence is [t0, t1, NaN, NaN, t4, t5] The model will first generate predicted_t2 from decoder input t0 and t1. Then, this predicted_t2 is the decoder input to generate predicted_t3. After filling all the empty values of sequences autoregressively, the filled sequences including [t0, t1, predicted_t2, predicted_t3, t4, t5] will be the input for decoder. The model is switched to teacher forcing mode where it start to generate output partially from its own predictions. For the next epoch, some of the input would be randomly sampled from the output of the previous epoch in a given probability $$\epsilon$$
+This produced a model with a  high R² score of **0.873**, but it suffered from a critical theoretical flaw: **exposure bias**. It had never been trained to handle its own errors, which could lead to forecast degradation in a live environment.
 
-
-### Phase 1 & 2: The Strong Baseline (Model V4)
-
-The initial phases focused on building a powerful Transformer model using standard best practices, including teacher forcing and scheduled sampling. This produced a model with a very high R² score of **0.873**, but it suffered from a critical theoretical flaw: **exposure bias**. It had never been trained to handle its own errors, which could lead to forecast degradation in a live environment.
 
 ### Phase 3: The Autoregressive Polish (Model V5)
 
@@ -63,11 +62,11 @@ This phase was designed specifically to eliminate exposure bias. The model was f
 
 ### The  Push: Calibrated Aggression (Model V6)
 
-Upon analyzing the V5 model, I diagnosed that it was slightly over-regularized—the training and validation performance were too close, suggesting it had more learning capacity. This led to a final, bold experiment based on a clear hypothesis:
+Upon analyzing the V5 model, we diagnosed that it was slightly over-regularized—the training and validation performance were too close, suggesting it had more learning capacity. This led to a final, bold experiment based on a clear hypothesis:
 
-> "I can accept an increasing gap between train and validation loss, as long as the validation performance itself improves. The model has untapped potential."
+> "We can accept an increasing gap between train and validation loss, as long as the validation performance itself improves. The model has untapped potential."
 
-By setting `dropout = 0` and reducing the `batch_size` for finer-grained updates, I allowed the model to use its full capacity. This final, aggressive polish unlocked its true potential, resulting in the final state-of-the-art R² score of **0.9002**.
+By setting `dropout = 0` and reducing the `batch_size` for finer-grained updates, we allowed the model to use its full capacity. This final, aggressive polish unlocked its true potential, resulting in the final state-of-the-art R² score of **0.9002**.
 
 ## Model Architecture & Features
 
